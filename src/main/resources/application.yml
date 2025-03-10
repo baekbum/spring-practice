@@ -1,0 +1,25 @@
+spring:
+  profiles:
+    active: local
+  datasource:
+    url: jdbc:h2:tcp://localhost/~/test
+    username: sa
+
+logging:
+  level:
+    org:
+      springframework:
+        jdbc: debug
+      hibernate:
+        SQL: DEBUG
+        type:
+          descriptor:
+            sql:
+              BasicBinder: TRACE
+
+#Mybatis
+mybatis:
+  type-aliases-package: com.example.demo.web.*.dto, com.example.demo.web.*.entity
+  configuration:
+    map-underscore-to-camel-case: true
+  mapper-locations: classpath:mapper/**/*.xml
