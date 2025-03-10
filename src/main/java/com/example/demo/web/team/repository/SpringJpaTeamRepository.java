@@ -9,7 +9,6 @@ import com.example.demo.web.team.entity.Team;
 import com.example.demo.web.team.exception.NoSearchTeamException;
 import com.example.demo.web.team.exception.TeamDuplicationException;
 import jakarta.persistence.EntityManager;
-import jakarta.persistence.Query;
 import jakarta.persistence.TypedQuery;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,11 +19,12 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 @Slf4j
-//@Primary
+@Primary
 @Repository
 @RequiredArgsConstructor
-public class JpaTeamRepository implements TeamRepository {
+public class SpringJpaTeamRepository implements TeamRepository {
 
+    private final SpringJpaTeam repository;
     private final EntityManager em;
 
     @Override
@@ -34,44 +34,27 @@ public class JpaTeamRepository implements TeamRepository {
         duplicateCheck(param, upperTeam);
 
         Team newTeam = new Team(param, upperTeam);
-        em.persist(newTeam);
+        repository.save(newTeam);
 
         return new TeamDto(newTeam);
     }
 
-    /**
-     * 상위팀을 찾는 메서드
-     * @param upperTeamId
-     * @return
-     */
-    private Team findUpperTeam(long upperTeamId) {
-        return em.find(Team.class, upperTeamId);
+    public Team findUpperTeam(long upperTeamId) {
+        Optional<Team> findUpperTeam = repository.findById(upperTeamId);
+        return findUpperTeam.orElseThrow(() -> new NoSearchTeamException("상위 팀을 찾을 수 없습니다."));
     }
 
-    /**
-     * 중복되는 팀이 있는지 확인하는 메서드
-     * @param param
-     */
-    private void duplicateCheck(InsertTeamParam param, Team upperTeam) {
-        String jpql = "SELECT t FROM Team t WHERE t.name = :name AND t.rank = :rank AND t.upperTeam = :upperTeam";
-
-        Query query = em.createQuery(jpql, Team.class);
-        query.setParameter("name", param.getName());
-        query.setParameter("rank", TeamRank.valueOf(param.getRank()));
-        query.setParameter("upperTeam", upperTeam);
-
-        List<Team> resultList = query.getResultList();
-
-        if (!resultList.isEmpty()) throw new TeamDuplicationException("이미 해당 팀이 존재합니다.");
+    public void duplicateCheck(InsertTeamParam param, Team upperTeam) {
+        Optional<Team> findTeam = repository.findByNameAndRankAndUpperTeam(param.getName(), TeamRank.valueOf(param.getRank()), upperTeam);
+        if (findTeam.isPresent()) throw new TeamDuplicationException("이미 해당 팀이 존재합니다.");
     }
 
     @Override
     public TeamDto findTeam(Long id) {
-        Team findTeam = em.find(Team.class, id);
+        Team team = repository.findById(id)
+                .orElseThrow(() -> new NoSearchTeamException("해당 팀을 찾을 수 없습니다."));
 
-        if (findTeam == null) throw new NoSearchTeamException("해당 팀을 찾을 수 없습니다.");
-
-        return new TeamDto(findTeam);
+        return new TeamDto(team);
     }
 
     @Override
@@ -122,10 +105,12 @@ public class JpaTeamRepository implements TeamRepository {
 
     @Override
     public TeamDto updateTeam(long id, UpdateTeamParam param) {
-        Team findTeam = em.find(Team.class, id);
+        Team upperTeam = findUpperTeam(param.getUpperTeamId());
+
+        Team findTeam = repository.findById(id).orElseThrow(() -> new NoSearchTeamException("해당 팀을 찾을 수 없습니다."));
 
         if (param.getUpperTeamId() != null) {
-            param.setUpperTeam(em.find(Team.class, param.getUpperTeamId()));
+            param.setUpperTeam(repository.findById(param.getUpperTeamId()).get());
         }
 
         findTeam.updateTeam(param);
@@ -135,8 +120,9 @@ public class JpaTeamRepository implements TeamRepository {
 
     @Override
     public TeamDto deleteTeam(long id) {
-        Team findTeam = em.find(Team.class, id);
-        em.remove(findTeam);
+        Team findTeam = repository.findById(id).orElseThrow(() -> new NoSearchTeamException("해당 팀을 찾을 수 없습니다."));
+
+        repository.delete(findTeam);
 
         return new TeamDto(findTeam);
     }
