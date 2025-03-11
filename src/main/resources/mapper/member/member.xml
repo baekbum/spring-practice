@@ -1,0 +1,79 @@
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.demo.web.member.repository.MemberMapper">
+
+    <insert id="save" useGeneratedKeys="true" keyProperty="memberNo">
+        INSERT INTO MEMBER (member_no, id, password, name, birth, rank, team_id)
+        VALUES (NEXT VALUE FOR member_table_sequence, #{id}, #{password}, #{name}, #{birth}, #{rank}, #{teamId})
+    </insert>
+
+    <select id="findMember" resultType="MemberDto">
+        SELECT m.member_no
+             , m.id
+             , m.name
+             , m.birth
+             , m.rank
+             , m.team_id
+             , t.name AS teamName
+          FROM MEMBER m
+     LEFT JOIN TEAM t
+            ON m.team_id = t.id
+         WHERE m.member_no = #{memberNo}
+    </select>
+
+    <select id="findMembers" resultType="MemberDto">
+        SELECT m.member_no
+             , m.id
+             , m.name
+             , m.birth
+             , m.rank
+             , m.team_id
+             , t.name AS teamName
+          FROM MEMBER m
+     LEFT JOIN TEAM t
+            ON m.team_id = t.id
+        <where>
+            <if test="memberNo != null" >
+                AND m.member_no = #{memberNo}
+            </if>
+
+            <if test="id != null">
+                AND m.id LIKE CONCAT('%', #{id}, '%')
+            </if>
+
+            <if test="name != null">
+                AND m.name LIKE CONCAT('%', #{name}, '%')
+            </if>
+
+            <if test="birth != null">
+                AND m.birth LIKE CONCAT('%', #{birth}, '%')
+            </if>
+
+            <if test="rank != null">
+                AND m.rank = #{rank}
+            </if>
+
+            <if test="teamId != null">
+                AND m.team_id = #{teamId}
+            </if>
+
+            <if test="teamName != null">
+                AND t.name LIKE CONCAT('%', #{teamName}, '%')
+            </if>
+        </where>
+    </select>
+
+    <update id="update">
+        UPDATE MEMBER
+           SET name = #{name}
+             , birth = #{birth}
+             , rank = #{rank}
+             , team_id = #{teamId}
+         WHERE member_no = #{memberNo}
+    </update>
+
+    <delete id="delete">
+        DELETE FROM MEMBER
+         WHERE member_no = #{memberNo}
+    </delete>
+</mapper>
