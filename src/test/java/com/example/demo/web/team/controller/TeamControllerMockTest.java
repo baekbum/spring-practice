@@ -1,5 +1,6 @@
 package com.example.demo.web.team.controller;
 
+import com.example.demo.web.auth.dto.userCond;
 import com.example.demo.web.config.WebSecurityConfig;
 import com.example.demo.web.team.dto.InsertTeamParam;
 import com.example.demo.web.team.dto.TeamCondition;
@@ -12,6 +13,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jayway.jsonpath.JsonPath;
 import jakarta.persistence.EntityManager;
+import jakarta.servlet.http.Cookie;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
@@ -56,6 +59,28 @@ class TeamControllerMockTest {
     @Autowired
     private EntityManager em;
 
+    private String JToken;
+
+    @BeforeEach
+    void getJToken() throws Exception {
+        // 토큰 발급 받기
+        String username = "admin";
+        String password = "qwer1234";
+
+        userCond userCond = new userCond(username, password);
+
+        MvcResult mvcResult = mockMvc.perform(post("/authenticate")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(userCond))
+                )
+                .andExpect(status().isOk())
+                .andReturn();
+
+        Cookie cookie = mvcResult.getResponse().getCookie("J-TOKEN");
+
+        JToken = cookie.getValue();
+    }
+
     @Test
     @DisplayName("1. [추가] 팀 - 성공 케이스")
     @WithMockUser(username = "admin", roles = {"ADMIN"})
@@ -65,6 +90,7 @@ class TeamControllerMockTest {
         String param = objectMapper.writeValueAsString(insertParam);
 
         mockMvc.perform(post("/team/add")
+                .header("J-TOKEN", JToken)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(param)
                 .with(csrf())
@@ -85,12 +111,14 @@ class TeamControllerMockTest {
         String insertParam2 = objectMapper.writeValueAsString(new InsertTeamParam("개발 1팀", "TEAM", 2L));
 
         mockMvc.perform(post("/team/add")
+                .header("J-TOKEN", JToken)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(insertParam1)
                 .with(csrf())
         ).andExpect(status().isOk());
 
         mockMvc.perform(post("/team/add")
+                .header("J-TOKEN", JToken)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(insertParam2)
                 .with(csrf())
@@ -106,12 +134,14 @@ class TeamControllerMockTest {
         String insertParam2 = objectMapper.writeValueAsString(new InsertTeamParam("개발 1팀", "TEAM", 2L));
 
         mockMvc.perform(post("/team/add")
+                .header("J-TOKEN", JToken)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(insertParam1)
                 .with(csrf())
         ).andExpect(status().isOk());
 
         MvcResult mvcResult = mockMvc.perform(post("/team/add")
+                .header("J-TOKEN", JToken)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(insertParam2)
                 .with(csrf())
@@ -127,6 +157,7 @@ class TeamControllerMockTest {
         String insertParam = objectMapper.writeValueAsString(new InsertTeamParam("개발 1팀", "TEAM", 3L));
 
         MvcResult mvcResult = mockMvc.perform(post("/team/add")
+                .header("J-TOKEN", JToken)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(insertParam)
                 .with(csrf())
@@ -137,7 +168,7 @@ class TeamControllerMockTest {
 
         long id = jsonNode.get("id").asLong();
 
-        mockMvc.perform(get("/team/search/" + id))
+        mockMvc.perform(get("/team/search/" + id).header("J-TOKEN", JToken))
                 .andExpect(status().isOk());
     }
 
@@ -146,7 +177,7 @@ class TeamControllerMockTest {
     @DisplayName("5. [검색] 팀 - 실패 케이스 ( ID 값으로 조회 )")
     @WithMockUser(username = "admin", roles = {"ADMIN"})
     void searchTeamFail1() throws Exception {
-        mockMvc.perform(get("/team/search/999"))
+        mockMvc.perform(get("/team/search/999").header("J-TOKEN", JToken))
                 .andExpect(status().is4xxClientError());
     }
 
@@ -160,18 +191,21 @@ class TeamControllerMockTest {
         String insertParam3 = objectMapper.writeValueAsString(new InsertTeamParam("개발 3팀", "TEAM", 3L));
 
         mockMvc.perform(post("/team/add")
+                .header("J-TOKEN", JToken)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(insertParam1)
                 .with(csrf())
         ).andExpect(status().isOk());
 
         mockMvc.perform(post("/team/add")
+                .header("J-TOKEN", JToken)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(insertParam2)
                 .with(csrf())
         ).andExpect(status().isOk());
 
         mockMvc.perform(post("/team/add")
+                .header("J-TOKEN", JToken)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(insertParam3)
                 .with(csrf())
@@ -185,6 +219,7 @@ class TeamControllerMockTest {
         String cond = objectMapper.writeValueAsString(condition);
 
         MvcResult mvcResult = mockMvc.perform(get("/team/search")
+                .header("J-TOKEN", JToken)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(cond)
         ).andExpect(status().isOk()).andReturn();
@@ -202,6 +237,7 @@ class TeamControllerMockTest {
         String insertParam = objectMapper.writeValueAsString(new InsertTeamParam("개발 1팀", "TEAM", 3L));
 
         MvcResult mvcResult = mockMvc.perform(post("/team/add")
+                .header("J-TOKEN", JToken)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(insertParam)
                 .with(csrf())
@@ -220,12 +256,13 @@ class TeamControllerMockTest {
         String param = objectMapper.writeValueAsString(updateParam);
 
         mockMvc.perform(post("/team/update/" + id)
+                .header("J-TOKEN", JToken)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(param)
                 .with(csrf())
         ).andExpect(status().isOk());
 
-        mockMvc.perform(get("/team/search/" + id))
+        mockMvc.perform(get("/team/search/" + id).header("J-TOKEN", JToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(id))
                 .andExpect(jsonPath("$.name").value("개발 2팀"))
@@ -240,6 +277,7 @@ class TeamControllerMockTest {
         String insertParam = objectMapper.writeValueAsString(new InsertTeamParam("개발 1팀", "TEAM", 3L));
 
         MvcResult mvcResult = mockMvc.perform(post("/team/add")
+                .header("J-TOKEN", JToken)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(insertParam)
                 .with(csrf())
@@ -250,9 +288,9 @@ class TeamControllerMockTest {
 
         long id = jsonNode.get("id").asLong();
 
-        mockMvc.perform(post("/team/delete/" + id).with(csrf())).andExpect(status().isOk());
+        mockMvc.perform(post("/team/delete/" + id).header("J-TOKEN", JToken).with(csrf())).andExpect(status().isOk());
 
-        mockMvc.perform(get("/team/search/" + id))
+        mockMvc.perform(get("/team/search/" + id).header("J-TOKEN", JToken))
                 .andExpect(status().is4xxClientError());
     }
 }
