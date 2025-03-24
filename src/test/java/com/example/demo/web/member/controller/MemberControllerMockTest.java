@@ -1,5 +1,6 @@
 package com.example.demo.web.member.controller;
 
+import com.example.demo.web.auth.dto.userCond;
 import com.example.demo.web.config.WebSecurityConfig;
 import com.example.demo.web.member.dto.InsertMemberParam;
 import com.example.demo.web.member.dto.MemberCondition;
@@ -12,6 +13,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.Cookie;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
@@ -53,6 +56,28 @@ class MemberControllerMockTest {
 
     @Autowired private ObjectMapper objectMapper;
 
+    private String JToken;
+
+    @BeforeEach
+    void getJToken() throws Exception {
+        // 토큰 발급 받기
+        String username = "admin";
+        String password = "qwer1234";
+
+        userCond userCond = new userCond(username, password);
+
+        MvcResult mvcResult = mockMvc.perform(post("/authenticate")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(userCond))
+                )
+                .andExpect(status().isOk())
+                .andReturn();
+
+        Cookie cookie = mvcResult.getResponse().getCookie("J-TOKEN");
+
+        JToken = cookie.getValue();
+    }
+
     @Test
     @DisplayName("1. [추가] 멤버 - 성공 케이스")
     @WithMockUser(username = "admin", roles = {"ADMIN"})
@@ -63,16 +88,17 @@ class MemberControllerMockTest {
         String param = objectMapper.writeValueAsString(shopper);
 
         mockMvc.perform(post("/member/add")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(param)
-                .with(csrf())
-        )
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.id").value(shopper.getId()))
-        .andExpect(jsonPath("$.name").value(shopper.getName()))
-        .andExpect(jsonPath("$.birth").value(shopper.getBrith()))
-        .andExpect(jsonPath("$.rank").value(shopper.getRank()))
-        .andExpect(jsonPath("$.teamId").value(1))
+                        .header("J-TOKEN", JToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(param)
+                        .with(csrf())
+                )
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(shopper.getId()))
+                .andExpect(jsonPath("$.name").value(shopper.getName()))
+                .andExpect(jsonPath("$.birth").value(shopper.getBrith()))
+                .andExpect(jsonPath("$.rank").value(shopper.getRank()))
+                .andExpect(jsonPath("$.teamId").value(1))
         ;
     }
 
@@ -86,12 +112,14 @@ class MemberControllerMockTest {
         String havana = objectMapper.writeValueAsString(new InsertMemberParam("havana", "qwer1234", "쇼퍼", "19910828", "MANAGER", 1L));
 
         mockMvc.perform(post("/member/add")
+                .header("J-TOKEN", JToken)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(shopper)
                 .with(csrf())
         ).andExpect(status().isOk());
 
         mockMvc.perform(post("/member/add")
+                .header("J-TOKEN", JToken)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(havana)
                 .with(csrf())
@@ -106,19 +134,21 @@ class MemberControllerMockTest {
         String shopper2 = objectMapper.writeValueAsString(new InsertMemberParam("shopper", "abcd1234", "쇼퍼2", "29910828", "MEMBER", 1L));
 
         mockMvc.perform(post("/member/add")
+                .header("J-TOKEN", JToken)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(shopper1)
                 .with(csrf())
         ).andExpect(status().isOk());
 
         mockMvc.perform(post("/member/add")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(shopper2)
+                        .header("J-TOKEN", JToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(shopper2)
                         .with(csrf())
-        )
-        .andExpect(status().is4xxClientError())
-        .andExpect(jsonPath("$.code").value("BAD"))
-        .andExpect(jsonPath("$.message").value("해당 ID는 이미 존재합니다."))
+                )
+                .andExpect(status().is4xxClientError())
+                .andExpect(jsonPath("$.code").value("BAD"))
+                .andExpect(jsonPath("$.message").value("해당 ID는 이미 존재합니다."))
         ;
     }
 
@@ -130,6 +160,7 @@ class MemberControllerMockTest {
         String shopper = objectMapper.writeValueAsString(new InsertMemberParam("shopper", "qwer1234", "쇼퍼", "19910828", "MANAGER", 1L));
 
         MvcResult mvcResult = mockMvc.perform(post("/member/add")
+                        .header("J-TOKEN", JToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(shopper)
                         .with(csrf())
@@ -142,7 +173,7 @@ class MemberControllerMockTest {
 
         String memberNo = jsonNode.get("memberNo").asText();
 
-        mockMvc.perform(get("/member/search/"+ memberNo))
+        mockMvc.perform(get("/member/search/"+ memberNo).header("J-TOKEN", JToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value("shopper"));
     }
@@ -153,7 +184,7 @@ class MemberControllerMockTest {
     @WithMockUser(username = "admin", roles = {"ADMIN"})
     void findMemberFail1() throws Exception {
 
-        mockMvc.perform(get("/member/search/99"))
+        mockMvc.perform(get("/member/search/99").header("J-TOKEN", JToken))
                 .andExpect(status().is4xxClientError())
                 .andExpect(jsonPath("$.code").value("BAD"))
                 .andExpect(jsonPath("$.message").value("해당 멤버를 찾을 수 없습니다."));
@@ -171,18 +202,21 @@ class MemberControllerMockTest {
         String modern = objectMapper.writeValueAsString(new InsertMemberParam("modern", "qwer1234", "모던", "19911028", "MANAGER", 1L));
 
         mockMvc.perform(post("/member/add")
+                .header("J-TOKEN", JToken)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(shopper)
                 .with(csrf())
         ).andExpect(status().isOk());
 
         mockMvc.perform(post("/member/add")
+                .header("J-TOKEN", JToken)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(havana)
                 .with(csrf())
         ).andExpect(status().isOk());
 
         mockMvc.perform(post("/member/add")
+                .header("J-TOKEN", JToken)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(modern)
                 .with(csrf())
@@ -195,6 +229,7 @@ class MemberControllerMockTest {
         String cond = objectMapper.writeValueAsString(condition);
 
         MvcResult mvcResult = mockMvc.perform(get("/member/search")
+                        .header("J-TOKEN", JToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(cond)
                 )
@@ -215,11 +250,12 @@ class MemberControllerMockTest {
         String shopper = objectMapper.writeValueAsString(new InsertMemberParam("shopper", "qwer1234", "쇼퍼", "19910828", "MEMBER", 1L));
 
         mockMvc.perform(post("/member/add")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(shopper)
-                .with(csrf())
-        )
-        .andExpect(status().isOk());
+                        .header("J-TOKEN", JToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(shopper)
+                        .with(csrf())
+                )
+                .andExpect(status().isOk());
 
         // 방금 전 등록한 데이터를 조회
         MemberCondition condition = new MemberCondition();
@@ -228,6 +264,7 @@ class MemberControllerMockTest {
         String cond = objectMapper.writeValueAsString(condition);
 
         MvcResult mvcResult = mockMvc.perform(get("/member/search")
+                .header("J-TOKEN", JToken)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(cond)
         ).andExpect(status().isOk()).andReturn();
@@ -245,12 +282,13 @@ class MemberControllerMockTest {
         String havana = objectMapper.writeValueAsString(updateParam);
 
         mockMvc.perform(post("/member/update/"+memberNo)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(havana)
-                .with(csrf())
-        )
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.name").value("havana"));
+                        .header("J-TOKEN", JToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(havana)
+                        .with(csrf())
+                )
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("havana"));
     }
 
     @Test
@@ -263,12 +301,14 @@ class MemberControllerMockTest {
         String havana = objectMapper.writeValueAsString(new InsertMemberParam("havana", "qwer1234", "하바나", "19910928", rank, 1L));
 
         mockMvc.perform(post("/member/add")
+                .header("J-TOKEN", JToken)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(shopper)
                 .with(csrf())
         ).andExpect(status().isOk());
 
         MvcResult mvcResult = mockMvc.perform(post("/member/add")
+                .header("J-TOKEN", JToken)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(havana)
                 .with(csrf())
@@ -279,8 +319,8 @@ class MemberControllerMockTest {
 
         String havanaNo = jsonNode.get("memberNo").asText();
 
-        mockMvc.perform(post("/member/delete/" + havanaNo).with(csrf()))
-                        .andExpect(status().isOk());
+        mockMvc.perform(post("/member/delete/" + havanaNo).header("J-TOKEN", JToken).with(csrf()))
+                .andExpect(status().isOk());
     }
 
     @Test
@@ -290,6 +330,7 @@ class MemberControllerMockTest {
         String shopper = objectMapper.writeValueAsString(new InsertMemberParam(null, null, "쇼퍼", "19910828", "MEMBER", 1L));
 
         MvcResult mvcResult = mockMvc.perform(post("/member/add")
+                .header("J-TOKEN", JToken)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(shopper)
                 .with(csrf())
@@ -312,6 +353,7 @@ class MemberControllerMockTest {
         String shopper = objectMapper.writeValueAsString(new InsertMemberParam("shopper", "qwer1234", "쇼퍼", "19910828", "MEMBER", 1L));
 
         MvcResult mvcResult = mockMvc.perform(post("/member/add")
+                .header("J-TOKEN", JToken)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(shopper)
                 .with(csrf())
