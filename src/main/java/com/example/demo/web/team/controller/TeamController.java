@@ -31,7 +31,7 @@ public class TeamController {
         return ResponseEntity.ok(service.findTeam(id));
     }
 
-    @GetMapping("/search")
+    @PostMapping("/search")
     public ResponseEntity<List<TeamDto>> findTeams(@RequestBody TeamCondition condition) {
         return ResponseEntity.ok(service.findTeams(condition));
     }

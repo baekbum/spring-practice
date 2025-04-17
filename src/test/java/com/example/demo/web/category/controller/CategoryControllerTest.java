@@ -6,7 +6,6 @@ import com.example.demo.web.category.dto.InsertCategoryParam;
 import com.example.demo.web.category.dto.UpdateCategoryParam;
 import com.example.demo.web.category.service.CategoryService;
 import com.example.demo.web.config.WebSecurityConfig;
-import com.example.demo.web.member.dto.InsertMemberParam;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.Cookie;
@@ -20,16 +19,15 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
-import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.transaction.annotation.Transactional;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @Import(WebSecurityConfig.class)
 @Transactional
@@ -193,7 +191,7 @@ class CategoryControllerTest {
         CategoryCondition condition = new CategoryCondition();
         condition.setName("의");
 
-        MvcResult mvcResult = mockMvc.perform(get("/category/search")
+        MvcResult mvcResult = mockMvc.perform(post("/category/search")
                         .header("J-TOKEN", JToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(condition))

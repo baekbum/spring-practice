@@ -218,7 +218,7 @@ class TeamControllerMockTest {
 
         String cond = objectMapper.writeValueAsString(condition);
 
-        MvcResult mvcResult = mockMvc.perform(get("/team/search")
+        MvcResult mvcResult = mockMvc.perform(post("/team/search")
                 .header("J-TOKEN", JToken)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(cond)

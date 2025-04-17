@@ -25,7 +25,7 @@ public class CategoryController {
     private final CategoryService service;
 
     @PostMapping("/add")
-    public ResponseEntity<?> addCategory(@Validated @RequestBody InsertCategoryParam param, BindingResult bindingResult, HttpServletResponse response){
+    public ResponseEntity<?> addCategory(@Validated @RequestBody InsertCategoryParam param, BindingResult bindingResult){
         if (bindingResult.hasErrors()) return new ResponseEntity<>(getBindingResult().apply(bindingResult), HttpStatus.BAD_REQUEST);
 
         CategoryDto categoryDto = service.addCategory(param);
@@ -38,7 +38,7 @@ public class CategoryController {
         return ResponseEntity.ok(service.findCategory(id));
     }
 
-    @GetMapping("/search")
+    @PostMapping("/search")
     public ResponseEntity<?> findCategories(@RequestBody CategoryCondition condition) {
         return ResponseEntity.ok(service.findCategories(condition));
     }
