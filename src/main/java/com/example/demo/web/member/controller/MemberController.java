@@ -51,7 +51,7 @@ public class MemberController {
         return ResponseEntity.ok(service.findMember(memberNo));
     }
 
-    @GetMapping("/search")
+    @PostMapping("/search")
     public ResponseEntity<List<?>> findMembers(@RequestBody MemberCondition condition) {
         return ResponseEntity.ok(service.findMembers(condition));
     }

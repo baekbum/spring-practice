@@ -175,7 +175,8 @@ class MemberControllerMockTest {
 
         mockMvc.perform(get("/member/search/"+ memberNo).header("J-TOKEN", JToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value("shopper"));
+                .andExpect(jsonPath("$.id").value("shopper"))
+                .andExpect(jsonPath("$.teamName").value("본사"));
     }
 
     //@Transactional(readOnly = true)
@@ -228,7 +229,7 @@ class MemberControllerMockTest {
 
         String cond = objectMapper.writeValueAsString(condition);
 
-        MvcResult mvcResult = mockMvc.perform(get("/member/search")
+        MvcResult mvcResult = mockMvc.perform(post("/member/search")
                         .header("J-TOKEN", JToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(cond)
