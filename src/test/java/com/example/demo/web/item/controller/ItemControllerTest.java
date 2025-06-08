@@ -178,7 +178,7 @@ class ItemControllerTest {
     }
 
     @Test
-    @DisplayName("7. [검색] 아이템 - 성공 케이스 ( ID로 검색 )")
+    @DisplayName("7. [검색] 아이템 - 성공 케이스 ( 조건 검색 )")
     void findItemsSuccess1() throws Exception {
         mockMvc.perform(post("/item/add")
                 .header("J-TOKEN", JToken)

@@ -17,6 +17,8 @@ import java.util.List;
 //@Primary
 @Repository
 @RequiredArgsConstructor
+public class MybatisMemberRepository {
+/*
 public class MybatisMemberRepository implements MemberRepository {
 
     private final MemberMapper memberMapper;
@@ -75,4 +77,5 @@ public class MybatisMemberRepository implements MemberRepository {
 
         return memberDto;
     }
+ */
 }

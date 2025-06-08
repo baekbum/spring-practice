@@ -29,7 +29,7 @@ public class JpaMemberRepository implements MemberRepository {
     private final EntityManager em;
 
     @Override
-    public MemberDto addMember(InsertMemberParam param) {
+    public Member addMember(InsertMemberParam param) {
         duplicateCheck(param.getId());
 
         Team findTeam = findTeam(param.getTeamId());
@@ -37,7 +37,7 @@ public class JpaMemberRepository implements MemberRepository {
         Member newMember = new Member(param, findTeam);
         em.persist(newMember);
 
-        return new MemberDto(newMember);
+        return newMember;
     }
 
     private Team findTeam(long teamId) {
@@ -59,16 +59,16 @@ public class JpaMemberRepository implements MemberRepository {
     }
 
     @Override
-    public MemberDto findMember(long memberNo) {
+    public Member findMember(long memberNo) {
         Member findMember = em.find(Member.class, memberNo);
 
         if (findMember == null) throw new NoSearchMemberException("해당 멤버를 찾을 수 없습니다.");
 
-        return new MemberDto(findMember);
+        return findMember;
     }
 
     @Override
-    public List<MemberDto> findMembers(MemberCondition condition) {
+    public List<Member> findMembers(MemberCondition condition) {
         StringBuilder jpql = new StringBuilder("SELECT m FROM Member m WHERE 1=1");
         Map<String, Object> paramMaps = new HashMap<>();
 
@@ -110,21 +110,11 @@ public class JpaMemberRepository implements MemberRepository {
             query.setParameter(key, paramMaps.get(key));
         }
 
-        List<Member> result = query.getResultList();
-
-        List<MemberDto> findMembers = new ArrayList<>();
-
-        if (!result.isEmpty()) {
-            findMembers = result.stream()
-                    .map(MemberDto::new)
-                    .collect(Collectors.toList());
-        }
-
-        return findMembers;
+        return query.getResultList();
     }
 
     @Override
-    public MemberDto updateMember(long memberNo, UpdateMemberParam param) {
+    public Member updateMember(long memberNo, UpdateMemberParam param) {
         Member findMember = em.find(Member.class, memberNo);
 
         if (param.getTeamId() != null) {
@@ -133,14 +123,14 @@ public class JpaMemberRepository implements MemberRepository {
 
         findMember.updateMember(param);
 
-        return new MemberDto(findMember);
+        return findMember;
     }
 
     @Override
-    public MemberDto deleteMember(long memberNo) {
+    public Member deleteMember(long memberNo) {
         Member findMember = em.find(Member.class, memberNo);
         em.remove(findMember);
 
-        return new MemberDto(findMember);
+        return findMember;
     }
 }

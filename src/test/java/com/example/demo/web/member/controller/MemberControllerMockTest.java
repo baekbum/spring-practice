@@ -264,7 +264,7 @@ class MemberControllerMockTest {
 
         String cond = objectMapper.writeValueAsString(condition);
 
-        MvcResult mvcResult = mockMvc.perform(get("/member/search")
+        MvcResult mvcResult = mockMvc.perform(post("/member/search")
                 .header("J-TOKEN", JToken)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(cond)

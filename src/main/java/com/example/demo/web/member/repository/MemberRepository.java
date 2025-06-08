@@ -10,13 +10,13 @@ import java.util.List;
 
 public interface MemberRepository {
 
-    MemberDto addMember(InsertMemberParam param);
+    Member addMember(InsertMemberParam param);
 
-    MemberDto findMember(long memberNo);
+    Member findMember(long memberNo);
 
-    List<MemberDto> findMembers(MemberCondition condition);
+    List<Member> findMembers(MemberCondition condition);
 
-    MemberDto updateMember(long memberNo, UpdateMemberParam param);
+    Member updateMember(long memberNo, UpdateMemberParam param);
 
-    MemberDto deleteMember(long memberNo);
+    Member deleteMember(long memberNo);
 }

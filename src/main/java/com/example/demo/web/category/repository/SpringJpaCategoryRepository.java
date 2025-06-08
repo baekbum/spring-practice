@@ -5,15 +5,20 @@ import com.example.demo.web.category.dto.CategoryDto;
 import com.example.demo.web.category.dto.InsertCategoryParam;
 import com.example.demo.web.category.dto.UpdateCategoryParam;
 import com.example.demo.web.category.entity.Category;
+import com.example.demo.web.category.entity.QCategory;
 import com.example.demo.web.category.exception.CategoryDuplicationException;
 import com.example.demo.web.category.exception.NoSearchCategoryException;
 import com.example.demo.web.common.CommonUtils;
+import com.example.demo.web.item.entity.QItem;
+import com.querydsl.core.types.dsl.BooleanExpression;
+import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.TypedQuery;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Repository;
+import org.springframework.util.StringUtils;
 
 import java.util.*;
 import java.util.function.Consumer;
@@ -29,8 +34,8 @@ import static com.example.demo.web.common.CommonUtils.*;
 @RequiredArgsConstructor
 public class SpringJpaCategoryRepository implements CategoryRepository {
 
+    private final JPAQueryFactory queryFactory;
     private final SpringJpaCategory categoryRepository;
-    private final EntityManager em;
 
     @Override
     public Category addCategory(InsertCategoryParam param) {
@@ -57,19 +62,14 @@ public class SpringJpaCategoryRepository implements CategoryRepository {
 
     @Override
     public List<Category> findCategories(CategoryCondition condition) {
-        StringBuilder jpql = new StringBuilder("SELECT c FROM Category c WHERE 1=1");
-        Map<String, Object> paramMaps = new HashMap<>();
+        QCategory category = QCategory.category;
 
-        if (condition.getName() != null) {
-            jpql.append(" AND c.name LIKE :name");
-            paramMaps.put("name", "%" + condition.getName() + "%");
-        }
-
-        TypedQuery<Category> query = em.createQuery(jpql.toString(), Category.class);
-
-        setQueryParam(query).accept(paramMaps);
-
-        return query.getResultList();
+        return queryFactory
+                .select(category)
+                .from(category)
+                .where(
+                        nameLike(condition.getName(), category)
+                ).fetch();
     }
 
     @Override
@@ -89,4 +89,7 @@ public class SpringJpaCategoryRepository implements CategoryRepository {
         return findCategory;
     }
 
+    private BooleanExpression nameLike(String name, QCategory category) {
+        return StringUtils.hasText(name) ? category.name.like("%" + name + "%") : null;
+    }
 }
