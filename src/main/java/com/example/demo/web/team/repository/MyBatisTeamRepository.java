@@ -18,8 +18,10 @@ import java.util.List;
 //@Primary
 @Repository
 @RequiredArgsConstructor
-public class MyBatisTeamRepository implements TeamRepository {
+public class MyBatisTeamRepository {
+//public class MyBatisTeamRepository implements TeamRepository {
 
+    /*
     private final TeamMapper teamMapper;
 
     @Override
@@ -74,4 +76,6 @@ public class MyBatisTeamRepository implements TeamRepository {
 
         return teamDto;
     }
+
+     */
 }

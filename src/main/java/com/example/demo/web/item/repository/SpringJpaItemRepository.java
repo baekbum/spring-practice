@@ -1,20 +1,26 @@
 package com.example.demo.web.item.repository;
 
 import com.example.demo.web.category.entity.Category;
+import com.example.demo.web.category.entity.QCategory;
 import com.example.demo.web.category.repository.SpringJpaCategoryRepository;
 import com.example.demo.web.common.CommonUtils;
 import com.example.demo.web.item.dto.InsertItemParam;
 import com.example.demo.web.item.dto.ItemCondition;
 import com.example.demo.web.item.dto.UpdateItemParam;
 import com.example.demo.web.item.entity.Item;
+import com.example.demo.web.item.entity.QItem;
 import com.example.demo.web.item.exception.ItemDuplicationException;
 import com.example.demo.web.item.exception.NoSearchItemException;
+import com.example.demo.web.member.entity.QMember;
+import com.querydsl.core.types.dsl.BooleanExpression;
+import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.TypedQuery;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Repository;
+import org.springframework.util.StringUtils;
 
 import java.util.HashMap;
 import java.util.List;
@@ -31,9 +37,9 @@ import static com.example.demo.web.common.CommonUtils.*;
 @RequiredArgsConstructor
 public class SpringJpaItemRepository implements ItemRepository {
 
+    private final JPAQueryFactory queryFactory;
     private final SpringJpaItem itemRepository;
     private final SpringJpaCategoryRepository categoryRepository;
-    private final EntityManager em;
 
     @Override
     public Item addItem(InsertItemParam param) {
@@ -62,45 +68,19 @@ public class SpringJpaItemRepository implements ItemRepository {
 
     @Override
     public List<Item> findItems(ItemCondition condition) {
-        StringBuilder jpql = new StringBuilder("SELECT i FROM Item i JOIN FETCH i.category WHERE 1=1");
-        Map<String, Object> paramMaps = new HashMap<>();
+        QItem item = QItem.item;
+        QCategory category = QCategory.category;
 
-        if (condition.getName() != null) {
-            jpql.append(" AND i.name LIKE :name");
-            paramMaps.put("name", "%" + condition.getName() + "%");
-        }
-
-        if (condition.getPrice() != null) {
-            jpql.append(" AND i.price ")
-                .append(condition.getPriceSign())
-                .append(":price");
-
-            paramMaps.put("price", condition.getPrice());
-        }
-
-        if (condition.getQuantity() != null) {
-            jpql.append(" AND i.quantity ")
-                .append(condition.getQuantitySign())
-                .append(":quantity");
-
-            paramMaps.put("quantity", condition.getQuantity());
-        }
-
-        if (condition.getCategoryId() != null) {
-            Category findCategory = categoryRepository.findCategory(condition.getCategoryId());
-
-            jpql.append(" AND i.category =:category");
-            paramMaps.put("category", findCategory);
-        }
-
-        System.out.println("쿼리 = " + jpql.toString());
-
-        TypedQuery<Item> query = em.createQuery(jpql.toString(), Item.class);
-
-
-        setQueryParam(query).accept(paramMaps);
-
-        return query.getResultList();
+        return queryFactory
+                .select(item)
+                .from(item)
+                .leftJoin(item.category, category)
+                .where(
+                        nameLike(condition.getName(), item),
+                        priceCompare(condition.getPrice(), condition.getPriceSign(), item),
+                        quantityCompare(condition.getQuantity(), condition.getPriceSign(), item),
+                        categoryIdEq(condition.getCategoryId(), item)
+                ).fetch();
     }
 
     @Override
@@ -121,5 +101,54 @@ public class SpringJpaItemRepository implements ItemRepository {
         itemRepository.delete(findItem);
 
         return findItem;
+    }
+
+    private BooleanExpression nameLike(String name, QItem item) {
+        return StringUtils.hasText(name) ? item.name.like("%" + name + "%") : null;
+    }
+
+    private BooleanExpression priceCompare(Integer price, String sign, QItem item) {
+        if (price == null) return null;
+        // > ,>= ,= , <=, <
+        switch (sign) {
+            case ">" :
+                return item.price.gt(price);
+            case ">=" :
+                return item.price.goe(price);
+            case "=" :
+                return item.price.eq(price);
+            case "<=" :
+                return item.price.loe(price);
+            case  "<" :
+                return item.price.lt(price);
+            default:
+                return null;
+        }
+    }
+
+    private BooleanExpression quantityCompare(Integer quantity, String sign, QItem item) {
+        if (quantity == null) return null;
+        // > ,>= ,= , <=, <
+        switch (sign) {
+            case ">" :
+                return item.quantity.gt(quantity);
+            case ">=" :
+                return item.quantity.goe(quantity);
+            case "=" :
+                return item.quantity.eq(quantity);
+            case "<=" :
+                return item.quantity.loe(quantity);
+            case  "<" :
+                return item.quantity.lt(quantity);
+            default:
+                return null;
+        }
+    }
+
+    private BooleanExpression categoryIdEq(Long id, QItem item) {
+        if (id == null) return null;
+        Category category = categoryRepository.findCategory(id);
+
+        return item.category.eq(category);
     }
 }

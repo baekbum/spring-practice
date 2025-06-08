@@ -201,7 +201,7 @@ class CategoryControllerTest {
 
         JsonNode jsonNode = objectMapper.readTree(mvcResult.getResponse().getContentAsString());
 
-        assertThat(jsonNode.size()).isEqualTo(2);
+        assertThat(jsonNode.size()).isEqualTo(3);
     }
 
     @Test

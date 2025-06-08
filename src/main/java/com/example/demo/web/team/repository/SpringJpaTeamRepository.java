@@ -1,19 +1,20 @@
 package com.example.demo.web.team.repository;
 
 import com.example.demo.web.team.common.TeamRank;
-import com.example.demo.web.team.dto.InsertTeamParam;
-import com.example.demo.web.team.dto.TeamCondition;
-import com.example.demo.web.team.dto.TeamDto;
-import com.example.demo.web.team.dto.UpdateTeamParam;
+import com.example.demo.web.team.dto.*;
+import com.example.demo.web.team.entity.QTeam;
 import com.example.demo.web.team.entity.Team;
 import com.example.demo.web.team.exception.NoSearchTeamException;
 import com.example.demo.web.team.exception.TeamDuplicationException;
+import com.querydsl.core.types.dsl.BooleanExpression;
+import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.TypedQuery;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Repository;
+import org.springframework.util.StringUtils;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -24,11 +25,12 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class SpringJpaTeamRepository implements TeamRepository {
 
+    private final JPAQueryFactory queryFactory;
     private final SpringJpaTeam repository;
     private final EntityManager em;
 
     @Override
-    public TeamDto addTeam(InsertTeamParam param) {
+    public Team addTeam(InsertTeamParam param) {
         Team upperTeam = findUpperTeam(param.getUpperTeamId());
 
         duplicateCheck(param, upperTeam);
@@ -36,7 +38,7 @@ public class SpringJpaTeamRepository implements TeamRepository {
         Team newTeam = new Team(param, upperTeam);
         repository.save(newTeam);
 
-        return new TeamDto(newTeam);
+        return newTeam;
     }
 
     public Team findUpperTeam(long upperTeamId) {
@@ -50,63 +52,29 @@ public class SpringJpaTeamRepository implements TeamRepository {
     }
 
     @Override
-    public TeamDto findTeam(Long id) {
-        Team team = repository.findById(id)
+    public Team findTeam(Long id) {
+        return repository.findById(id)
                 .orElseThrow(() -> new NoSearchTeamException("해당 팀을 찾을 수 없습니다."));
-
-        return new TeamDto(team);
     }
 
     @Override
-    public List<TeamDto> findTeams(TeamCondition condition) {
-        StringBuilder jpql = new StringBuilder("SELECT t FROM Team t WHERE 1=1");
-        Map<String, Object> paramMaps = new HashMap<>();
+    public List<Team> findTeams(TeamCondition condition) {
+        QTeam team = QTeam.team;
 
-        if (condition.getId() != null) {
-            jpql.append(" AND t.id = :id");
-            paramMaps.put("id", condition.getId());
-        }
-
-        if (condition.getName() != null) {
-            jpql.append(" AND t.name LIKE :name");
-            paramMaps.put("name", "%" + condition.getName() + "%");
-        }
-
-        if (condition.getRank() != null) {
-            jpql.append(" AND t.rank = :rank");
-            paramMaps.put("rank", TeamRank.valueOf(condition.getRank()));
-        }
-
-        if (condition.getUpperTeamId() != null) {
-            Team upperTeam = findUpperTeam(condition.getUpperTeamId());
-            jpql.append(" AND t.upperTeam = :upperTeam");
-            paramMaps.put("upperTeam", upperTeam);
-        }
-
-        TypedQuery<Team> query = em.createQuery(jpql.toString(), Team.class);
-
-        Set<String> keys = paramMaps.keySet();
-        for (String key : keys) {
-            query.setParameter(key, paramMaps.get(key));
-        }
-
-        List<Team> result = query.getResultList();
-
-        List<TeamDto> findTeams = new ArrayList<>();
-
-        if (!result.isEmpty()) {
-            findTeams = result.stream()
-                    .map(TeamDto::new)
-                    .collect(Collectors.toList());
-        }
-
-        return findTeams;
+        return queryFactory
+                .select(team)
+                .from(team)
+                .where(
+                        idEq(condition.getId(), team),
+                        nameContains(condition.getName(), team),
+                        rankEq(condition.getRank(), team),
+                        upperTeamEq(condition.getUpperTeamId(), team)
+                )
+                .fetch();
     }
 
     @Override
-    public TeamDto updateTeam(long id, UpdateTeamParam param) {
-        Team upperTeam = findUpperTeam(param.getUpperTeamId());
-
+    public Team updateTeam(long id, UpdateTeamParam param) {
         Team findTeam = repository.findById(id).orElseThrow(() -> new NoSearchTeamException("해당 팀을 찾을 수 없습니다."));
 
         if (param.getUpperTeamId() != null) {
@@ -115,15 +83,31 @@ public class SpringJpaTeamRepository implements TeamRepository {
 
         findTeam.updateTeam(param);
 
-        return new TeamDto(findTeam);
+        return findTeam;
     }
 
     @Override
-    public TeamDto deleteTeam(long id) {
+    public Team deleteTeam(long id) {
         Team findTeam = repository.findById(id).orElseThrow(() -> new NoSearchTeamException("해당 팀을 찾을 수 없습니다."));
 
         repository.delete(findTeam);
 
-        return new TeamDto(findTeam);
+        return findTeam;
+    }
+
+    private BooleanExpression idEq(Long id, QTeam team) {
+        return id != null ? team.id.eq(id) : null;
+    }
+
+    private BooleanExpression nameContains(String name, QTeam team) {
+        return StringUtils.hasText(name) ? team.name.contains(name) : null;
+    }
+
+    private BooleanExpression rankEq(String name, QTeam team) {
+        return StringUtils.hasText(name) ? team.rank.eq(TeamRank.valueOf(name)) : null;
+    }
+
+    private BooleanExpression upperTeamEq(Long id, QTeam team) {
+        return id != null ? team.upperTeam.eq(findUpperTeam(id)) : null;
     }
 }

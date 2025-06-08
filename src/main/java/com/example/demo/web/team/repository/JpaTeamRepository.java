@@ -28,7 +28,7 @@ public class JpaTeamRepository implements TeamRepository {
     private final EntityManager em;
 
     @Override
-    public TeamDto addTeam(InsertTeamParam param) {
+    public Team addTeam(InsertTeamParam param) {
         Team upperTeam = findUpperTeam(param.getUpperTeamId());
 
         duplicateCheck(param, upperTeam);
@@ -36,7 +36,7 @@ public class JpaTeamRepository implements TeamRepository {
         Team newTeam = new Team(param, upperTeam);
         em.persist(newTeam);
 
-        return new TeamDto(newTeam);
+        return newTeam;
     }
 
     /**
@@ -66,16 +66,16 @@ public class JpaTeamRepository implements TeamRepository {
     }
 
     @Override
-    public TeamDto findTeam(Long id) {
+    public Team findTeam(Long id) {
         Team findTeam = em.find(Team.class, id);
 
         if (findTeam == null) throw new NoSearchTeamException("해당 팀을 찾을 수 없습니다.");
 
-        return new TeamDto(findTeam);
+        return findTeam;
     }
 
     @Override
-    public List<TeamDto> findTeams(TeamCondition condition) {
+    public List<Team> findTeams(TeamCondition condition) {
         StringBuilder jpql = new StringBuilder("SELECT t FROM Team t WHERE 1=1");
         Map<String, Object> paramMaps = new HashMap<>();
 
@@ -107,21 +107,11 @@ public class JpaTeamRepository implements TeamRepository {
             query.setParameter(key, paramMaps.get(key));
         }
 
-        List<Team> result = query.getResultList();
-
-        List<TeamDto> findTeams = new ArrayList<>();
-
-        if (!result.isEmpty()) {
-            findTeams = result.stream()
-                    .map(TeamDto::new)
-                    .collect(Collectors.toList());
-        }
-
-        return findTeams;
+        return query.getResultList();
     }
 
     @Override
-    public TeamDto updateTeam(long id, UpdateTeamParam param) {
+    public Team updateTeam(long id, UpdateTeamParam param) {
         Team findTeam = em.find(Team.class, id);
 
         if (param.getUpperTeamId() != null) {
@@ -130,14 +120,14 @@ public class JpaTeamRepository implements TeamRepository {
 
         findTeam.updateTeam(param);
 
-        return new TeamDto(findTeam);
+        return findTeam;
     }
 
     @Override
-    public TeamDto deleteTeam(long id) {
+    public Team deleteTeam(long id) {
         Team findTeam = em.find(Team.class, id);
         em.remove(findTeam);
 
-        return new TeamDto(findTeam);
+        return findTeam;
     }
 }

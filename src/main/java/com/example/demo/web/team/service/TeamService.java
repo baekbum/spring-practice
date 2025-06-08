@@ -23,29 +23,31 @@ public class TeamService {
 
     @TimeAop
     public TeamDto addTeam(InsertTeamParam param) {
-        return repository.addTeam(param);
+        return new TeamDto(repository.addTeam(param));
     }
 
     @TimeAop
     @Transactional(readOnly = true)
     public TeamDto findTeam(long id) {
-        return repository.findTeam(id);
+        return new TeamDto(repository.findTeam(id));
     }
 
     @TimeAop
     @Transactional(readOnly = true)
     public List<TeamDto> findTeams(TeamCondition condition) {
-        return repository.findTeams(condition);
+        return repository.findTeams(condition).stream()
+                .map(TeamDto::new)
+                .toList();
     }
 
     @TimeAop
     public TeamDto updateTeam(long id, UpdateTeamParam param) {
-        return repository.updateTeam(id, param);
+        return new TeamDto(repository.updateTeam(id, param));
     }
 
     @TimeAop
     public TeamDto deleteTeam(long id) {
-        return repository.deleteTeam(id);
+        return new TeamDto(repository.deleteTeam(id));
     }
 
 }

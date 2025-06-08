@@ -23,25 +23,27 @@ public class MemberService {
     private final MemberRepository repository;
 
     public MemberDto addMember(InsertMemberParam param) {
-        return repository.addMember(param);
+        return new MemberDto(repository.addMember(param));
     }
 
     @Transactional(readOnly = true)
     public MemberDto findMember(long memberNo) {
-        return repository.findMember(memberNo);
+        return new MemberDto(repository.findMember(memberNo));
     }
 
     @Transactional(readOnly = true)
     public List<MemberDto> findMembers(MemberCondition condition) {
-        return repository.findMembers(condition);
+        return repository.findMembers(condition).stream()
+                .map(MemberDto::new)
+                .toList();
     }
 
     public MemberDto updateMember(long memberNo, UpdateMemberParam param) {
-        return repository.updateMember(memberNo, param);
+        return new MemberDto(repository.updateMember(memberNo, param));
     }
 
     public MemberDto deleteMember(long memberNo) {
-        return repository.deleteMember(memberNo);
+        return new MemberDto(repository.deleteMember(memberNo));
     }
 
 }
